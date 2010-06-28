@@ -1,0 +1,3 @@
+*.pyc
+*~
+/django_ledger.egg-info
