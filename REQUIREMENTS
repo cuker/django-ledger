@@ -1,5 +1,5 @@
 #the format of this document is to follow pip's specification for a requirements file
 #run: pip install -r REQUIREMENTS
 django==1.1.2
--e git+git://github.com/cuker/django-dagcategory.git#egg=django-dagcategory
+#-e git+git://github.com/cuker/django-dagcategory.git#egg=django-dagcategory
 
