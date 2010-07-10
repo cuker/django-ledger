@@ -1,12 +1,19 @@
 from django.db import models
 from django.conf import settings
 
+from dagcategory.models import DAGCategory
+
 from common import *
 
 PRECISION = getattr(settings, 'LEDGER_PRECISION', {'max_digits':12, 'decimal_places':2})
 
 class AccountManager(models.Manager):
     def create_transaction(self, credit_account, debit_account, amount):
+        """
+        credit_account: the account to credit
+        debit_account: the account to debit
+        amount: a nonnegative number
+        """
         if amount < 0:
             raise LedgerException("Invalid amount")
         if credit_account.polarity == debit_account.polarity:
@@ -24,6 +31,8 @@ class AccountManager(models.Manager):
                                 debit_balance=debit_acount.balance,)
 
 class Account(models.Model):
+    name = models.CharField(max_length=50)
+    code = models.CharField(max_length=10)
     unit = models.CharField(max_length=5)
     balance = models.DecimalField(default=0, **PRECISION)
     polarity = models.CharField(max_length=1, choices=ACCT_CHOICES)
@@ -65,3 +74,24 @@ class Transaction(models.Model):
         if self.amount < 0:
             raise ValidationError('Amount must be non-negative')
 
+class AccountCategory(DAGCategory):
+    """
+    Purely for organizing our accounts in a manner to help us analyze our accounting data
+    """
+    accounts = models.ManyToManyField(Account, blank=True)
+    
+    def all_accounts(self):
+        return self._all_subitems(Account.objects.all(), 'accountcategory')
+
+    def all_credit_transactions(self):
+        return self._all_subitems(Transaction.objects.all(), 'credit_account__accountcategory')
+
+    def all_debit_transactions(self):
+        return self._all_subitems(Transaction.objects.all(), 'debit_account__accountcategory')
+    
+    def all_transactions(self):
+        return self.all_credit_transactions() | self.all_debit_transactions()
+
+    def get_balance(self):
+        return self.all_accounts().aggregate(models.Sum('balance'))['balance']
+    
