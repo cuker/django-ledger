@@ -36,6 +36,7 @@ class Account(models.Model):
     unit = models.CharField(max_length=5)
     balance = models.DecimalField(default=0, **PRECISION)
     polarity = models.CharField(max_length=1, choices=ACCT_CHOICES)
+    enforce_positive_balance = models.BooleanField(default=False)
 
     modified = models.DateTimeField(auto_now=True, editable=False)
     created = models.DateTimeField(auto_now_add=True, editable=False)
@@ -44,7 +45,7 @@ class Account(models.Model):
 
     def _change_balance(self, amount):
         self.balance += amount
-        if self.balance < 0:
+        if self.enforce_positive_balance and self.balance < 0:
             raise LedgerException("Transactions may not make the balance negative")
         self.save()
     
@@ -57,6 +58,8 @@ class Account(models.Model):
         if self.polarity == ACCT_CREDIT:
             amount *= -1
         self._change_balance(amount)
+    
+    #TODO consider a public method for debiting or crediting?
 
 class Transaction(models.Model):
     credit_account = models.ForeignKey(Account, related_name='credit_transactions')
